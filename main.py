@@ -230,7 +230,8 @@ class VKAPICLIENT:
         folder_name = "backup_photos"
         folder_id = None
         query = f"name='{
-            folder_name}' and mimeType='application/vnd.google-apps.folder' and 'root' in parents"
+            folder_name}' and mimeType='application/vnd.google-apps.folder' and 'root' in parents and trashed=false"
+
         response = service.files().list(q=query, fields="files(id)").execute()
         folders = response.get('files', [])
         if folders:
@@ -268,7 +269,7 @@ class VKAPICLIENT:
                                           fields="id").execute()
             
             # Очищаем переменную, чтобы не было утечки памяти
-            response, media, created_file = None
+            media = None
 
             photo_info_json.append({'file_name': image_name, 'size': self.photo_type})
             # print(f"Загрузка фотографии № {index+1} из {count_photos} на Google Диск: {image_name}")
