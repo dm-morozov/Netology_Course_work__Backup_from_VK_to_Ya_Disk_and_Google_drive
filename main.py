@@ -10,14 +10,14 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaInMemoryUpload
 
 
-class VKAPICLIENT:
+class VkApiClient:
 
     """Класс для работы с VK API."""
 
     API_BASE_URL = 'https://api.vk.com/method/'
 
 
-    def __init__(self, token, user_id, photo_type='z') -> None:
+    def __init__(self, token, photo_type='z') -> None:
 
         """
         Инициализация класса.
@@ -29,7 +29,6 @@ class VKAPICLIENT:
         """
 
         self.token = token
-        self.user_id = user_id
         self.photo_type = photo_type
 
 
@@ -48,16 +47,19 @@ class VKAPICLIENT:
         }
 
 
-    def status_info(self):
+    def status_info(self, user_id):
 
         """
         Получение информации о пользователе.
+        
+        Args:
+            user_id: ID пользователя VK.
 
         Returns:
             {"Имя Фамилия": ID пользователя.}
         """
 
-        params = {**self.get_common_params(), 'user_ids': self.user_id}
+        params = {**self.get_common_params(), 'user_ids': user_id}
         url = self.API_BASE_URL + 'users.get'
         response = requests.get(url, params=params).json()
         first_name = response.get('response', [])[0].get('first_name')
@@ -66,28 +68,32 @@ class VKAPICLIENT:
         return {f"{first_name} {last_name}": user_id_info}
 
 
-    def get_status(self):
+    def get_status(self, user_id):
 
         """
         Получение статуса пользователя.
+
+        Args:
+            user_id: ID пользователя VK.
 
         Returns:
             Строка с текстом статуса пользователя.
         """
 
         params = self.get_common_params()
-        params.update({'user_ids': self.user_id})
+        params.update({'user_ids': user_id})
         url = self.API_BASE_URL + 'status.get'
         response = requests.get(url, params=params)
         return response.json().get('response', {}).get('text')
 
 
-    def set_status(self, new_status):
-
+    def set_status(self, user_id, new_status):
         """
         Изменение статуса пользователя.
 
         Args:
+            user_id: ID пользователя VK.
+
             new_status: Новый текст статуса.
 
         Returns:
@@ -95,13 +101,13 @@ class VKAPICLIENT:
         """
 
         params = self.get_common_params()
-        params.update({'user_ids': self.user_id, 'text': new_status})
+        params.update({'user_ids': user_id, 'text': new_status})
         url = self.API_BASE_URL + 'status.set'
         response = requests.get(url, params=params)
         response.raise_for_status()
 
 
-    def replase_status(self, target, replace_string):
+    def replase_status(self, user_id, target, replace_string):
 
         """
         Замена текста в статусе пользователя.
@@ -114,17 +120,19 @@ class VKAPICLIENT:
             Строка с текстом статуса пользователя.
         """
 
-        status = self.get_status()
+        status = self.get_status(user_id)
         new_status = status.replace(target, replace_string)
-        return self.set_status(new_status)
+        return self.set_status(user_id, new_status)
 
 
-    def get_profail_photos(self, count=5, album_id='profile'):
+    def get_profile_photos(self, user_id, count=5, album_id='profile'):
         
         """
         Получение фотографий профиля пользователя.
 
         Args:
+            user_id: ID пользователя VK.
+
             count: Количество фотографий.
 
             album_id: Идентификатор альбома в VK (по умолчанию 'profile'): 
@@ -140,7 +148,7 @@ class VKAPICLIENT:
 
         profile_photos = []
         params = {**self.get_common_params(),
-                  'owner_id': self.user_id,
+                  'owner_id': user_id,
                   'album_id': album_id,
                   'extended': 1,
                   'photo_sizes': 1,
@@ -156,12 +164,14 @@ class VKAPICLIENT:
                     profile_photos.append(profile_photo)
         return profile_photos
 
-    def save_photos_to_yandex_disk(self, count_photos=5, album_id='profile'):
+    def save_photos_to_yandex_disk(self, album_id_vk, count_photos=5, album_id='profile'):
 
         """
         Сохранение фотографий c VK профиля пользователя на Яндекс.Диск.
 
         Args:
+            album_id_vk: Идентификатор пользователя VK.    
+
             count_photos: количество фотографий, которые нужно сохранить на Яндекс.Диск, по умолчанию 5.
 
             album_id: Идентификатор альбома в VK (по умолчанию 'profile'): 
@@ -169,7 +179,7 @@ class VKAPICLIENT:
                 'profile' — фотографии профиля.
         """
 
-        photos = self.get_profail_photos(count_photos, album_id)
+        photos = self.get_profile_photos(album_id_vk, count_photos, album_id)
         headers = {'Authorization': f'OAuth {TOKEN_YA_DISK}'}
         folder_path = 'backup_photos'
         photo_info_json = []
@@ -199,12 +209,14 @@ class VKAPICLIENT:
             json.dump(photo_info_json, json_file, indent=4)
 
 
-    def save_photos_to_google_drive(self, count_photos=5, album_id='profile'):
+    def save_photos_to_google_drive(self, album_id_vk, count_photos=5, album_id='profile'):
 
         """
         Сохранение фотографий c VK профиля пользователя на Google Диск.
 
         Args:
+            album_id_vk: Идентификатор пользователя VK.
+
             count_photos: количество фотографий, которые нужно сохранить на Google Drive, по умолчанию 5.
 
             album_id: Идентификатор альбома в VK (по умолчанию 'profile'): 
@@ -212,7 +224,7 @@ class VKAPICLIENT:
                 'profile' — фотографии профиля.
         """
 
-        photos = self.get_profail_photos(count_photos, album_id)
+        photos = self.get_profile_photos(album_id_vk, count_photos, album_id)
         SCOPES = ["https://www.googleapis.com/auth/drive"]
         creds = None
 
@@ -283,15 +295,15 @@ with open('api.txt', 'r') as token:
     TOKEN_YA_DISK = token.readline()
 
 if __name__ == '__main__':
-    vk_client = VKAPICLIENT(TOKEN_VK, USER_ID)
-    print(vk_client.status_info())
+    vk_client = VkApiClient(TOKEN_VK)
+    print(vk_client.status_info(USER_ID))
 
-    print(vk_client.get_status())
-    # vk_client.replase_status('Изучаю', 'Учу')
-    # print(vk_client.get_status())
+    # print(vk_client.get_status(USER_ID))
+    # vk_client.replase_status(USER_ID, 'Изучаю', 'Учу')
+    # print(vk_client.get_status(USER_ID))
 
-    # pprint(vk_client.get_profail_photos())
-    vk_client.save_photos_to_yandex_disk(5)
-    vk_client.save_photos_to_google_drive(10, 'wall')
+    # pprint(vk_client.get_profile_photos(USER_ID))
+    vk_client.save_photos_to_yandex_disk(USER_ID, 5)
+    vk_client.save_photos_to_google_drive(USER_ID, 10, 'wall')
 
     print('Работа завершена')
